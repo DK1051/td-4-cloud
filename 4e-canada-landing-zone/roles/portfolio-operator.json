@@ -1,0 +1,17 @@
+{
+  "Name": "Portfolio Operator (td-4)",
+  "IsCustom": true,
+  "Description": "Can read everything and can start, stop and deallocate virtual machines; nothing else. The scope below is a placeholder: fill in the real subscription only in a git-ignored local copy named roles/portfolio-operator.local.json, never in this file.",
+  "Actions": [
+    "*/read",
+    "Microsoft.Compute/virtualMachines/start/action",
+    "Microsoft.Compute/virtualMachines/powerOff/action",
+    "Microsoft.Compute/virtualMachines/deallocate/action"
+  ],
+  "NotActions": [],
+  "DataActions": [],
+  "NotDataActions": [],
+  "AssignableScopes": [
+    "/subscriptions/<SUBSCRIPTION_ID>"
+  ]
+}
