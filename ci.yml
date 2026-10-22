@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Least privilege for the automatic GITHUB_TOKEN. gitleaks needs to list the
+# commits of a pull request and may post a comment on a finding, which is why
+# pull-requests is write. No other secret is used anywhere in this workflow.
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  checks:
+    # The branch ruleset requires a status check called exactly "checks".
+    # Do NOT add a `name:` to this job - it would rename the check.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out (full history, needed by the secret scan)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies (only if requirements.txt exists)
+        run: |
+          if [ -f requirements.txt ]; then
+            python -m pip install -r requirements.txt
+          else
+            echo "No requirements.txt - skipping install"
+          fi
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Tests (pytest; exit code 5 means "no tests collected", which is fine)
+        run: pytest -q || [ $? -eq 5 ]
+
+      # Track 4 extra: validate the 4H Bicep template with the Azure CLI that is
+      # preinstalled on GitHub runners (az installs the Bicep CLI on first use).
+      # Skipped cleanly until T4-S02 creates the file.
+      - name: Bicep build (4H template; skipped until it exists)
+        run: |
+          if [ -f 4h-secretless-deploy/main.bicep ]; then
+            az bicep build --file 4h-secretless-deploy/main.bicep
+          else
+            echo "4h-secretless-deploy/main.bicep not present yet - skipping"
+          fi

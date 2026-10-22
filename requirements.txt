@@ -1,0 +1,4 @@
+# Track 4 only needs these three. Versions confirmed on PyPI on 2026-10-21.
+pyyaml==6.0.3
+pytest==9.1.1
+ruff==0.17.1

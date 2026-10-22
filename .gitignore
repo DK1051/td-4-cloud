@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets and local-only files (never commit)
+*.env
+.env*
+*.pem
+*.key
+secrets/
+.dev/
+# Local copies of files where Eojin fills in a real ID (e.g. roles/portfolio-operator.local.json)
+*.local.json
+# Compiled Bicep output (rebuilt from main.bicep; never committed)
+4h-secretless-deploy/main.json
+
+# Scratch
+/tmp/
+keycloak-*/
+*.tar.gz
