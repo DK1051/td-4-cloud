@@ -16,7 +16,7 @@ SKIP_DIRS = {".git", ".venv", ".pytest_cache", ".ruff_cache", "__pycache__"}
 GUID_RE = re.compile(r"[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}")
 # The company name followed by a dot and a letter is a domain; only the
 # fictional ".example" ending is allowed.
-BAD_DOMAIN_RE = re.compile(r"mapleharbour\.(?!example(?![a-z.]))[a-z]", re.IGNORECASE)
+BAD_DOMAIN_RE = re.compile(r"mapleharbour\.(?!example(?![a-z]|\.[a-z]))[a-z]", re.IGNORECASE)
 
 ROLE_ACTIONS = [
     "*/read",

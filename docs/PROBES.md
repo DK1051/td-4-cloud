@@ -25,4 +25,4 @@ Notes on this run (added by the director, not by `probe.sh`): the `java:` line's
 What this means for Track 4:
 - `bicep: 0.48.1` — the Bicep tool (which turns Azure infrastructure files into deployable templates) is installed, so T4-S02 can check Bicep files locally as well as in CI. The setup script downloads the "latest" release rather than a pinned version, so the version may differ between environments (caveat logged).
 - `management.azure.com -> HTTP 000` — Azure's management API is blocked here, as intended: no file in this session is tested against Azure; Eojin applies them in Azure Cloud Shell.
-- `reach https://github.com/` is not part of `probe.sh`; GitHub's API is used in this session only to read Microsoft's public policy repository.
+- `reach https://github.com/` is not part of `probe.sh`; in this session api.github.com answered HTTP 403, so Microsoft's public policy files were read from raw.githubusercontent.com (HTTP 200).

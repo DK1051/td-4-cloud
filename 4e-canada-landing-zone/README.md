@@ -5,7 +5,7 @@ A *landing zone* is the set of rules you put on a cloud account on day one, befo
 
 1. **Policy: keep resources in Canada.** A *policy* is a rule Azure checks every time something is created; this one refuses anything outside the regions `canadacentral` and `canadaeast`. Two built-in policies do the job: "Allowed locations" and "Allowed locations for resource groups".
 2. **Policy: every resource needs an owner.** A *tag* is a name=value label on a resource. The built-in policy "Require a tag on resources" refuses any resource that has no `owner` tag, so nothing is created without a name attached.
-3. **A limited role.** A *role* is a named bundle of permissions. "Portfolio Operator (td-4)" can read everything and start, stop and deallocate virtual machines, and nothing else. A *scope* is where a role or policy applies; this role is limited to one subscription.
+3. **A limited role.** A *role* is a named bundle of permissions. "Portfolio Operator (td-4)" can read everything and start, stop and deallocate virtual machines, and nothing else. A *scope* is where a role or policy applies; this role is limited to one subscription. Creating the role does not give it to anyone; assigning it to an operator account (as the diagram shows) happens later, outside 4E.
 4. **A budget and an alert.** A monthly spending budget with e-mail alerts, and an alert that fires when anyone is given new permissions, because that is the first thing an attacker with a stolen account does.
 
 Nothing in this folder was run against Azure by Claude. Every file is applied by Eojin himself in Azure Cloud Shell after the pull request is merged.
@@ -47,7 +47,7 @@ SCOPE="/subscriptions/$(az account show --query id -o tsv)"
 assign() {  # $1 = assignment name, $2 = built-in definition display name, $3 = parameter file
   DEF=$(az policy definition list --query "[?displayName=='$2' && policyType=='BuiltIn'].name" -o tsv)
   if [ "$(printf '%s\n' "$DEF" | grep -c .)" -ne 1 ]; then
-    echo "STOP: expected exactly one built-in definition named '$2'. Ask Claude."; return 1
+    echo "Skipped: expected exactly one built-in definition named '$2'. Fix this one before going on; ask Claude."; return 1
   fi
   az policy assignment create --name "$1" --display-name "$2 (td-4)" \
     --policy "$DEF" --params "@$3" --scope "$SCOPE" --query name -o tsv
