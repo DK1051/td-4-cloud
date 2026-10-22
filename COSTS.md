@@ -2,4 +2,4 @@
 
 Format: `- <date> <ID> | balance before $ | balance after $ | spent $ | cap $ | note`
 
-- 2026-10-23 T4-S01 | balance before $250.00 | balance after $246.20 | spent $3.80 | cap $5 | note (example) — delete this line when the first real entry is added
+- 2026-10-22 T4-S01 | balance before $TODO(Eojin) | balance after $TODO(Eojin) | spent $TODO(Eojin) | cap $5 | ran in one cloud session with the other D0 sessions; see the hub `COSTS.md` for the combined number
