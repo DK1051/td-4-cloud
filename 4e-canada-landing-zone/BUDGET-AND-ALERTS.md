@@ -1,6 +1,6 @@
 # Budget and "new permissions" alert (portal steps)
 
-> **WARNING, read before you click anything.** Every portal wizard has a **Tags** tab. On each one, add the tag `owner` = your name. If you skip it, your own 4E tag policy ("Require a tag on resources") will deny the action group and the alert rule, and the wizard fails at the last step. (A *tag* is a name=value label attached to an Azure resource; the policy refuses any resource that has no `owner` label.)
+> **WARNING, read before you click anything.** Every portal wizard has a **Tags** tab. On each one, add the tag `owner` = your name. If you skip it, your own 4E tag policy ("Require a tag on resources") will deny the action group and the alert rule, and the action will be refused by the policy. (A *tag* is a name=value label attached to an Azure resource; the policy refuses any resource that has no `owner` label.)
 
 Do this after the policies are applied (see `README.md`) and after you have signed up (see `SIGNUP.md`). Portal labels change from time to time; if a button is named slightly differently, go by what it does. Nothing here needs a command or an ID.
 
@@ -34,18 +34,19 @@ A *role assignment* is the record that says "this account gets this role in this
 1. In the portal search bar type **Monitor** and open it, then open **Alerts**.
 2. Click **Create** and then **Alert rule**.
 3. **Scope**: choose your subscription.
-4. **Condition**: click **See all signals**, search for **Create role assignment** (the operation `Microsoft.Authorization/roleAssignments/write`), select it, and keep the default of alerting on every occurrence.
+4. **Condition**: click **See all signals**, search for **Create role assignment** (the operation `Microsoft.Authorization/roleAssignments/write`), select it, and leave the filters empty so every such event alerts. `TODO(verify on the day)`: the wizard's wording for this step.
 5. **Actions**: click **Create action group** (an *action group* is the list of people and things Azure contacts when an alert fires).
    - Name it `ag-td4-email`.
    - On the **Notifications** tab choose **Email/SMS message/Push/Voice**, tick **Email**, and enter your own e-mail address.
    - On the **Tags** tab add `owner` = your name (see the warning above).
+   - On the **Basics** tab, choose the resource group `rg-td4-canada` (created in README Step 2). Do not use "Create new": it may offer a region outside Canada, which your own policy would refuse.
    - Create it and make sure it is selected for the alert rule.
-6. **Details**: name the rule `alert-role-assignment-write`, and pick a resource group for it to live in.
+6. **Details**: name the rule `alert-role-assignment-write`, and choose the resource group `rg-td4-canada` (same reason as above).
 7. **Tags** tab: add `owner` = your name.
 8. Click **Review + create**, then **Create**.
 
 ### Check that it works
-After the 4E README's optional role-assignment step, wait a few minutes and look for the e-mail. `TODO(verify)`: how long Azure takes to deliver activity-log alerts. Record what you saw in the Results table of `README.md` (crop every ID out of screenshots).
+The alert fires the next time any role assignment is created in the subscription, for example when you later give the 4H deployment identity a role. Then wait a few minutes and look for the e-mail. `TODO(verify)`: how long Azure takes to deliver activity-log alerts. Record what you saw in the Results table of `README.md` (crop every ID out of screenshots).
 
 ## If something is refused
 If the wizard fails with a message about policy, you probably forgot an `owner` tag or chose a region outside Canada. Fix the tag or the region and try again. That refusal is the 4E guard-rail working as intended.

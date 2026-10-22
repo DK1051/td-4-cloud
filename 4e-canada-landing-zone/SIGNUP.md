@@ -1,5 +1,7 @@
 # Signing up for the Azure free account
 
+`TODO(verify)`: all terms below come from the plan; check the sign-up page on the day.
+
 Follow these rules in order. Each has one sentence on why, so you can explain it in an interview.
 
 1. **The Azure free account is for new customers only.** Microsoft gives the credit to people who have never had an Azure free account, so an e-mail, card or phone that was used before can be refused.

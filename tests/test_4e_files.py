@@ -16,7 +16,7 @@ SKIP_DIRS = {".git", ".venv", ".pytest_cache", ".ruff_cache", "__pycache__"}
 GUID_RE = re.compile(r"[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}")
 # The company name followed by a dot and a letter is a domain; only the
 # fictional ".example" ending is allowed.
-BAD_DOMAIN_RE = re.compile(r"mapleharbour\.(?!example\b)[a-z]", re.IGNORECASE)
+BAD_DOMAIN_RE = re.compile(r"mapleharbour\.(?!example(?![a-z.]))[a-z]", re.IGNORECASE)
 
 ROLE_ACTIONS = [
     "*/read",
@@ -93,7 +93,8 @@ def test_budget_and_alerts_guide_has_required_content():
     text = (FOUR_E / "BUDGET-AND-ALERTS.md").read_text(encoding="utf-8")
     for needle in ["50%", "80%", "100%", "Microsoft.Authorization/roleAssignments/write"]:
         assert needle in text, needle
-    # The Tags-tab warning must come before the first numbered or section content.
+    # The Tags-tab warning must come before Part A (and Part A must exist).
+    assert "## Part A" in text
     assert "Tags" in text.split("## Part A")[0]
 
 
@@ -105,6 +106,9 @@ def test_signup_guide_has_all_six_rules():
 
 def test_compliance_is_never_claimed():
     claim_denial = re.compile(r"NOT claim|claims no|does not claim", re.IGNORECASE)
+    readme_lines = (FOUR_E / "README.md").read_text(encoding="utf-8").splitlines()
+    # Not vacuous: the README must actually contain a denial line.
+    assert any(re.search(r"complian", ln, re.IGNORECASE) and claim_denial.search(ln) for ln in readme_lines)
     for path in FOUR_E.rglob("*.md"):
         for line in path.read_text(encoding="utf-8").splitlines():
             if re.search(r"complian", line, re.IGNORECASE):

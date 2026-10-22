@@ -31,7 +31,7 @@ I read these three files from the `Azure/azure-policy` repository on GitHub (bra
 | Allowed locations for resource groups | `listOfAllowedLocations` | `effect` (default Deny) | https://raw.githubusercontent.com/Azure/azure-policy/master/built-in-policies/policyDefinitions/General/ResourceGroupAllowedLocations_Deny.json |
 | Require a tag on resources | `tagName` | none | https://raw.githubusercontent.com/Azure/azure-policy/master/built-in-policies/policyDefinitions/Tags/RequireTag_Deny.json |
 
-Because the two location policies use the same parameter name, one parameter file serves both. Their `effect` is already Deny by default, so the parameter files do not set it.
+Both location files list exactly two parameters when re-fetched on 2026-10-22: `listOfAllowedLocations` (type Array) and `effect` (type String, default `Deny`, allowed values Audit, Deny, Disabled). Because the two location policies use the same parameter name, one parameter file serves both. `effect` is already Deny by default, so the parameter files do not set it.
 
 ## How I apply it
 Do `SIGNUP.md` first. Then open Azure Cloud Shell (portal, the Cloud Shell icon, **Bash**, **No storage account required**). Cloud Shell is already signed in, so there is no `az login`, and you never type an ID: the commands look the subscription up for you.
@@ -41,41 +41,45 @@ git clone https://github.com/DK1051/td-4-cloud && cd td-4-cloud/4e-canada-landin
 SCOPE="/subscriptions/$(az account show --query id -o tsv)"
 ```
 
-**Step 1. Policies** (each lookup should print exactly one definition; if it prints nothing or several, stop and ask Claude):
+**Step 1. Policies.** The helper below looks a built-in definition up by its display name and stops with a message unless it finds exactly one (an empty or doubled answer would assign the wrong thing). The `--query name -o tsv` part prints only the assignment name, so no subscription ID appears on screen.
 
 ```bash
-# Allowed locations
-DEF=$(az policy definition list --query "[?displayName=='Allowed locations' && policyType=='BuiltIn'].name" -o tsv)
-az policy assignment create --name allowed-locations --display-name "Allowed locations (Canada only)" \
-  --policy "$DEF" --params @policies/allowed-locations.parameters.json --scope "$SCOPE"
-
-# Allowed locations for resource groups
-DEF=$(az policy definition list --query "[?displayName=='Allowed locations for resource groups' && policyType=='BuiltIn'].name" -o tsv)
-az policy assignment create --name allowed-locations-rg --display-name "Allowed locations for resource groups (Canada only)" \
-  --policy "$DEF" --params @policies/allowed-locations.parameters.json --scope "$SCOPE"
-
-# Require an owner tag
-DEF=$(az policy definition list --query "[?displayName=='Require a tag on resources' && policyType=='BuiltIn'].name" -o tsv)
-az policy assignment create --name require-owner-tag --display-name "Require owner tag" \
-  --policy "$DEF" --params @policies/require-tags.parameters.json --scope "$SCOPE"
+assign() {  # $1 = assignment name, $2 = built-in definition display name, $3 = parameter file
+  DEF=$(az policy definition list --query "[?displayName=='$2' && policyType=='BuiltIn'].name" -o tsv)
+  if [ "$(printf '%s\n' "$DEF" | grep -c .)" -ne 1 ]; then
+    echo "STOP: expected exactly one built-in definition named '$2'. Ask Claude."; return 1
+  fi
+  az policy assignment create --name "$1" --display-name "$2 (td-4)" \
+    --policy "$DEF" --params "@$3" --scope "$SCOPE" --query name -o tsv
+}
+assign allowed-locations    "Allowed locations"                      policies/allowed-locations.parameters.json
+assign allowed-locations-rg "Allowed locations for resource groups"  policies/allowed-locations.parameters.json
+assign require-owner-tag    "Require a tag on resources"             policies/require-tags.parameters.json
 ```
 
 New assignments do not start enforcing instantly. `TODO(verify)`: the documented delay (Microsoft Learn, Azure Policy evaluation triggers). 4H's test that a deployment to `westus` is refused only proves something once the policies are in force.
 
-**Step 2. The custom role** (the `sed` command puts your subscription into a local copy that git ignores):
+**Step 2. The resource group.** The alert and its action group (Step 4) need a resource group (a named container for related resources), and it must be in Canada or our own policy refuses it. Replace `<your-name>` with your name:
 
 ```bash
+az group create --name rg-td4-canada --location canadacentral --tags owner=<your-name> -o none
+```
+
+**Step 3. The custom role** (the `sed` command puts your subscription into a local copy that git ignores):
+
+```bash
+# '#' is the sed separator because the scope contains '/'
 sed "s#<SUBSCRIPTION_ID>#$(az account show --query id -o tsv)#" roles/portfolio-operator.json > roles/portfolio-operator.local.json
-az role definition create --role-definition @roles/portfolio-operator.local.json
+az role definition create --role-definition @roles/portfolio-operator.local.json --query roleName -o tsv
 ```
 
-**Step 3. Budget and alert** in the portal: follow `BUDGET-AND-ALERTS.md`. Add the `owner` tag in every wizard.
-
-**Step 4 (optional check). Give the role to a second account** and watch the alert fire. Use a non-admin account in your Track 3 tenant as `<operator-sign-in-name>`:
+If the role already exists (you are re-running this), `create` is refused; update it instead:
 
 ```bash
-az role assignment create --assignee "<operator-sign-in-name>" --role "Portfolio Operator (td-4)" --scope "$SCOPE"
+az role definition update --role-definition @roles/portfolio-operator.local.json --query roleName -o tsv
 ```
+
+**Step 4. Budget and alert** in the portal: follow `BUDGET-AND-ALERTS.md`. Add the `owner` tag in every wizard and choose `rg-td4-canada` as the resource group.
 
 ## What Eojin did / what Claude did
 
@@ -99,6 +103,7 @@ Fill in after applying. Crop every ID out of screenshots; no raw portal exports.
 ## Limits
 - Not tested against Azure. The automatic tests only check the JSON files; Eojin's manual run is the real test.
 - The location policy skips resources whose location is `global`, and the tag policy does not apply to resource groups (both stated in Microsoft's own descriptions in the source files above). So a tag on resource groups is not enforced by this project.
+- Mounting a Cloud Shell storage account later will be denied unless the account is in Canada and has an `owner` tag.
 - A policy only stops new actions; it does not delete anything that already exists.
 - Whether a budget is available on a free-trial subscription is `TODO(verify)`.
 - The free-account terms and sign-up URL are `TODO(verify)` on sign-up day.
