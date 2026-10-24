@@ -131,3 +131,25 @@ def test_cannot_do_never_prints_the_captured_error_text():
             if re.search(r'\$out\b|\$\{out\}', line) and re.search(r"\b(echo|printf)\b", line):
                 # allowed only when the text goes into grep (a code check), never to the log
                 assert "| grep" in line, line
+
+
+def test_oidc_setup_guide_has_the_critical_details():
+    text = (FOUR_H / "OIDC-SETUP.md").read_text(encoding="utf-8")
+    for needle in [
+        "Other issuer",
+        "repo:DK1051@<OWNER_ID>/td-4-cloud@<REPO_ID>:ref:refs/heads/main",
+        "api://AzureADTokenExchange",
+        "https://token.actions.githubusercontent.com",
+        "api.github.com/repos/DK1051/td-4-cloud",
+        "owner.id",
+        "July 15, 2026",
+        "rename",
+        "GitHub Actions deploying Azure resources",
+        "https://docs.github.com/en/actions/reference/security/oidc",
+        "AADSTS70021",
+        "AADSTS700016",
+        "AuthorizationFailed",
+        "MissingSubscriptionRegistration",
+        "Check this format on the GitHub docs page above",
+    ]:
+        assert needle in text, needle
