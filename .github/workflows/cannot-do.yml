@@ -1,0 +1,110 @@
+name: 4H cannot-do
+
+# Proves what the deployment identity must NOT be able to do. Each step EXPECTS Azure to refuse.
+# A step passes only when the refusal carries the specific error code; any success, or any other
+# failure, fails the job. Started by hand, on main only.
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: Resource group the deployment identity can use (Contributor)
+        required: true
+        default: rg-td4-canada
+      private_resource_group:
+        description: Resource group the deployment identity has NO access to
+        required: true
+        default: rg-td4-private
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  cannot-do:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v6
+
+      - name: Log in to Azure (OIDC, no stored password)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: "(a) A deployment to westus must be denied by the 4E location policy"
+        env:
+          RG: ${{ inputs.resource_group }}
+        run: |
+          # verdict WHAT EXIT_CODE OUTPUT CODE...  : pass only if the command failed AND OUTPUT contains a wanted CODE.
+          verdict() {
+            what="$1"; code="$2"; out="$3"; shift 3
+            if [ "$code" -eq 0 ]; then echo "FAIL: $what"; exit 1; fi
+            for want in "$@"; do
+              if printf '%s' "$out" | grep -q "$want"; then echo "PASS: $what (refused with $want)"; return 0; fi
+            done
+            # Error codes only: the full text can contain object IDs that GitHub does not mask.
+            echo "FAIL: failed for another reason: $(printf '%s' "$out" | grep -o '([A-Za-z]*)' | sort -u | tr '\n' ' ')"
+            exit 1
+          }
+          set +e
+          out=$(az deployment group create --resource-group "$RG" \
+            --template-file 4h-secretless-deploy/main.bicep \
+            --parameters location=westus owner=cannot-do-test --output none 2>&1)
+          code=$?
+          set -e
+          verdict "a deployment to westus should have been denied by policy" "$code" "$out" RequestDisallowedByPolicy
+
+      - name: "(b) The identity must not be able to give out roles (role assignment denied)"
+        env:
+          RG: ${{ inputs.resource_group }}
+        run: |
+          verdict() {
+            what="$1"; code="$2"; out="$3"; shift 3
+            if [ "$code" -eq 0 ]; then echo "FAIL: $what"; exit 1; fi
+            for want in "$@"; do
+              if printf '%s' "$out" | grep -q "$want"; then echo "PASS: $what (refused with $want)"; return 0; fi
+            done
+            echo "FAIL: failed for another reason: $(printf '%s' "$out" | grep -o '([A-Za-z]*)' | sort -u | tr '\n' ' ')"
+            exit 1
+          }
+          # The identity's own object ID is the "oid" claim inside its access token (a token is three
+          # dot-separated parts; the middle part is base64-encoded JSON). Reading it here avoids a
+          # Microsoft Graph lookup, which this identity is not allowed to make.
+          OID=$(az account get-access-token --query accessToken -o tsv 2>/dev/null | python3 -c '
+          import sys, json, base64
+          part = sys.stdin.read().strip().split(".")[1]
+          part += "=" * (-len(part) % 4)
+          print(json.loads(base64.urlsafe_b64decode(part))["oid"])
+          ' 2>/dev/null) || OID=""
+          if [ -z "$OID" ]; then echo "FAIL: could not read the identity's object ID from its token"; exit 1; fi
+          echo "::add-mask::$OID"
+          SCOPE=$(az group show --name "$RG" --query id -o tsv 2>/dev/null) || SCOPE=""
+          if [ -z "$SCOPE" ]; then echo "FAIL: could not read resource group $RG (does it exist, and is Contributor assigned?)"; exit 1; fi
+          echo "::add-mask::$SCOPE"
+          set +e
+          out=$(az role assignment create --assignee-object-id "$OID" --assignee-principal-type ServicePrincipal \
+            --role Reader --scope "$SCOPE" --output none 2>&1)
+          code=$?
+          set -e
+          verdict "a role assignment should have been denied" "$code" "$out" AuthorizationFailed
+
+      - name: "(c) A resource group the identity has no access to must not be readable"
+        env:
+          PRIVATE_RG: ${{ inputs.private_resource_group }}
+        run: |
+          verdict() {
+            what="$1"; code="$2"; out="$3"; shift 3
+            if [ "$code" -eq 0 ]; then echo "FAIL: $what"; exit 1; fi
+            for want in "$@"; do
+              if printf '%s' "$out" | grep -q "$want"; then echo "PASS: $what (refused with $want)"; return 0; fi
+            done
+            echo "FAIL: failed for another reason: $(printf '%s' "$out" | grep -o '([A-Za-z]*)' | sort -u | tr '\n' ' ')"
+            exit 1
+          }
+          set +e
+          out=$(az group show --name "$PRIVATE_RG" --output none 2>&1)
+          code=$?
+          set -e
+          verdict "reading the private resource group should have been refused" "$code" "$out" AuthorizationFailed ResourceGroupNotFound

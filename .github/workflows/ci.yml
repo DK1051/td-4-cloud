@@ -54,6 +54,8 @@ jobs:
       - name: Bicep build (4H template; skipped until it exists)
         run: |
           if [ -f 4h-secretless-deploy/main.bicep ]; then
+            az bicep install --version v0.48.1
+            az bicep version
             az bicep build --file 4h-secretless-deploy/main.bicep
           else
             echo "4h-secretless-deploy/main.bicep not present yet - skipping"
