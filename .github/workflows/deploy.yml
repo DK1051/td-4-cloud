@@ -46,9 +46,10 @@ jobs:
             --query properties.provisioningState -o tsv 2>&1)
           code=$?
           set -e
-          if [ "$code" -ne 0 ]; then
+          if [ "$code" -ne 0 ] || ! grep -qx Succeeded <<<"$out"; then
             # Public logs: print error codes only, never the full error text (it can hold object IDs).
-            echo "FAIL: deployment did not succeed. Error codes: $(printf '%s' "$out" | grep -o '([A-Za-z]*)' | sort -u | tr '\n' ' ')"
+            codes=$(grep -oE '\([A-Za-z]+\)|(Error )?Code: *[A-Za-z]+|"code": *"[A-Za-z]+"' <<<"$out" | sort -u | tr '\n' ' ') || true
+            echo "FAIL: deployment did not succeed. Error codes: $codes"
             exit 1
           fi
-          printf '%s\n' "$out" | tail -n 1
+          echo Succeeded

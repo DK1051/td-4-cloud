@@ -4,6 +4,7 @@ These tests only read files in this repository. Nothing here talks to Azure or G
 """
 
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -76,9 +77,17 @@ def test_ci_and_setup_script_pin_bicep_0_48_1():
     ci = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
     assert "az bicep install --version v0.48.1" in ci
     assert ci.index("az bicep install") < ci.index("az bicep build")
+    # az would otherwise use any Bicep found on the runner's PATH, which makes the pin ineffective.
+    assert "az config set bicep.use_binary_from_path=false" in ci
+    assert ci.index("use_binary_from_path=false") < ci.index("az bicep install")
+    assert "az bicep version | grep -q '0\\.48\\.1' || { echo \"FAIL: wrong Bicep version\"; exit 1; }" in ci
+    assert ci.index("grep -q '0\\.48\\.1'") < ci.index("az bicep build")
     setup = (REPO / "environment" / "setup.sh").read_text(encoding="utf-8")
     assert "BICEP=0.48.1" in setup
     assert setup.rstrip().endswith("exit 0")
+    assert "--max-time 300" in setup
+    assert "(-[0-9A-Za-z.]+)?" in setup  # a pre-release suffix counts as a different version
+    assert "WARN bicep on PATH" in setup
 
 
 def test_bicep_template_is_locked_down():
@@ -87,6 +96,8 @@ def test_bicep_template_is_locked_down():
         "supportsHttpsTrafficOnly: true",
         "minimumTlsVersion: 'TLS1_2'",
         "allowBlobPublicAccess: false",
+        "allowSharedKeyAccess: false",
+        "defaultToOAuthAuthentication: true",
         "location string = 'canadacentral'",
         "Standard_LRS",
         "StorageV2",
@@ -108,29 +119,115 @@ def test_bicep_account_name_prefix_fits_the_24_character_limit():
     assert 3 <= len(match.group(1)) + 13 <= 24  # uniqueString returns 13 characters
 
 
+VERDICT_SH = FOUR_H / "verdict.sh"
+SOURCE_LINE = '. "$GITHUB_WORKSPACE/4h-secretless-deploy/verdict.sh"'
+
+
+def cannot_do_scripts():
+    return [s["run"] for s in all_steps(load_workflow("cannot-do.yml")) if "run" in s]
+
+
 def test_cannot_do_has_three_steps_that_pass_only_on_the_specific_codes():
-    wf = load_workflow("cannot-do.yml")
-    scripts = [s["run"] for s in all_steps(wf) if "run" in s]
+    scripts = cannot_do_scripts()
     assert len(scripts) == 3
     a, b, c = scripts
     assert "RequestDisallowedByPolicy" in a and "location=westus" in a
+    assert "REQUIRE_ALSO=allowed-locations" in a  # must be refused by OUR location rule
     assert "AuthorizationFailed" in b and "--role Reader" in b and "::add-mask::$OID" in b
-    assert "AuthorizationFailed" in c and "ResourceGroupNotFound" in c
+    # (c) accepts AuthorizationFailed only (Eojin's decision); "not found" is a failure.
+    assert "group missing or identity can read the subscription" in c
+    verdict_calls = [ln for ln in c.splitlines() if ln.strip().startswith("verdict ")]
+    assert len(verdict_calls) == 1 and verdict_calls[0].rstrip().endswith("AuthorizationFailed")
     for script in scripts:
+        assert SOURCE_LINE in script
         assert "set +e" in script and "set -e" in script
-        assert "FAIL: failed for another reason" in script
-        assert "grep -q" in script  # pass only when the specific code is found
-        assert "grep -o '([A-Za-z]*)'" in script  # failures print codes only
         assert "--output none" in script
 
 
-def test_cannot_do_never_prints_the_captured_error_text():
-    wf = load_workflow("cannot-do.yml")
-    for step in all_steps(wf):
-        for line in step.get("run", "").splitlines():
-            if re.search(r'\$out\b|\$\{out\}', line) and re.search(r"\b(echo|printf)\b", line):
-                # allowed only when the text goes into grep (a code check), never to the log
-                assert "| grep" in line, line
+def test_verdict_script_passes_only_on_codes_and_prints_codes_only():
+    text = VERDICT_SH.read_text(encoding="utf-8")
+    assert "grep -q" in text  # pass only when the specific code is found
+    assert "FAIL: failed for another reason" in text
+    assert "grep -oE" in text and "Code: *[A-Za-z]+" in text  # nested codes are found
+    for line in text.splitlines():
+        if re.search(r"\$\{?out\b", line) and re.search(r"\b(echo|printf)\b", line):
+            raise AssertionError(f"verdict.sh prints the captured text: {line}")
+
+
+def test_workflows_never_print_the_captured_error_text_or_trace_commands():
+    for name in DEPLOY_WORKFLOWS:
+        for step in all_steps(load_workflow(name)):
+            run = step.get("run", "")
+            assert "set -x" not in run and "set -o xtrace" not in run, name
+            for line in run.splitlines():
+                if re.search(r"\$out\b|\$\{out\}", line) and re.search(r"\b(echo|printf)\b", line):
+                    raise AssertionError(f"{name} prints the captured text: {line}")
+    assert "set -x" not in VERDICT_SH.read_text(encoding="utf-8")
+
+
+def test_deploy_workflow_succeeds_only_on_the_word_succeeded():
+    run = next(s["run"] for s in all_steps(load_workflow("deploy.yml")) if "run" in s)
+    assert "grep -qx Succeeded" in run
+    assert "Code: *[A-Za-z]+" in run  # failures print codes only
+
+
+SECRET_TEXT = "SECRET-MESSAGE object id 12345"
+
+
+def run_verdict(fake_command, *wanted, require_also=None):
+    """Run verdict.sh the way the workflow does (bash -e with pipefail) against a fake command."""
+    script = (
+        '. "$VERDICT"; set +e; out=$(bash -c "$FAKE" 2>&1); code=$?; set -e; '
+        'verdict "the thing should have been denied" "$code" "$out" ' + " ".join(wanted)
+    )
+    env = {"PATH": "/usr/bin:/bin", "VERDICT": str(VERDICT_SH), "FAKE": fake_command}
+    if require_also:
+        env["REQUIRE_ALSO"] = require_also
+    return subprocess.run(
+        ["bash", "-e", "-o", "pipefail", "-c", script], check=False, env=env, capture_output=True, text=True
+    )
+
+
+def test_verdict_fails_when_the_command_succeeds():
+    r = run_verdict(f"echo {SECRET_TEXT}; exit 0", "AuthorizationFailed")
+    assert r.returncode == 1
+    assert r.stdout.strip() == "FAIL: the thing should have been denied"
+    assert "SECRET-MESSAGE" not in r.stdout + r.stderr
+
+
+def test_verdict_fails_for_another_reason_and_prints_codes_only():
+    r = run_verdict(f"echo 'ERROR: (SomethingElse) {SECRET_TEXT}' >&2; exit 1", "AuthorizationFailed")
+    assert r.returncode == 1
+    assert r.stdout.strip() == "FAIL: failed for another reason: (SomethingElse)"
+    assert "SECRET-MESSAGE" not in r.stdout + r.stderr
+
+
+def test_verdict_prints_json_style_codes_too():
+    r = run_verdict(f'echo \'{{"code": "InvalidTemplateDeployment", "message": "{SECRET_TEXT}"}}\'; exit 1', "AuthorizationFailed")
+    assert r.returncode == 1
+    assert '"code": "InvalidTemplateDeployment"' in r.stdout
+    assert "SECRET-MESSAGE" not in r.stdout
+
+
+def test_verdict_passes_on_a_nested_expected_code():
+    cmd = f"echo 'ERROR: (DeploymentFailed) Code: RequestDisallowedByPolicy {SECRET_TEXT}' >&2; exit 1"
+    r = run_verdict(cmd, "RequestDisallowedByPolicy")
+    assert r.returncode == 0
+    assert r.stdout.startswith("PASS:")
+    assert "SECRET-MESSAGE" not in r.stdout + r.stderr
+
+
+def test_verdict_with_require_also_needs_both_texts():
+    cmd = "echo 'ERROR: (RequestDisallowedByPolicy) policyAssignments/some-other-rule' >&2; exit 1"
+    r = run_verdict(cmd, "RequestDisallowedByPolicy", require_also="allowed-locations")
+    assert r.returncode == 1 and "not by the expected rule" in r.stdout
+    cmd = "echo 'ERROR: (RequestDisallowedByPolicy) policyAssignments/allowed-locations' >&2; exit 1"
+    assert run_verdict(cmd, "RequestDisallowedByPolicy", require_also="allowed-locations").returncode == 0
+
+
+def test_verdict_does_not_pass_on_resource_group_not_found_when_only_authorization_failed_is_wanted():
+    r = run_verdict("echo 'ERROR: (ResourceGroupNotFound) x' >&2; exit 1", "AuthorizationFailed")
+    assert r.returncode == 1 and "failed for another reason" in r.stdout
 
 
 def test_oidc_setup_guide_has_the_critical_details():

@@ -37,44 +37,28 @@ jobs:
         env:
           RG: ${{ inputs.resource_group }}
         run: |
-          # verdict WHAT EXIT_CODE OUTPUT CODE...  : pass only if the command failed AND OUTPUT contains a wanted CODE.
-          verdict() {
-            what="$1"; code="$2"; out="$3"; shift 3
-            if [ "$code" -eq 0 ]; then echo "FAIL: $what"; exit 1; fi
-            for want in "$@"; do
-              if printf '%s' "$out" | grep -q "$want"; then echo "PASS: $what (refused with $want)"; return 0; fi
-            done
-            # Error codes only: the full text can contain object IDs that GitHub does not mask.
-            echo "FAIL: failed for another reason: $(printf '%s' "$out" | grep -o '([A-Za-z]*)' | sort -u | tr '\n' ' ')"
-            exit 1
-          }
+          . "$GITHUB_WORKSPACE/4h-secretless-deploy/verdict.sh"  # defines verdict(); see that file
           set +e
           out=$(az deployment group create --resource-group "$RG" \
             --template-file 4h-secretless-deploy/main.bicep \
             --parameters location=westus owner=cannot-do-test --output none 2>&1)
           code=$?
           set -e
-          verdict "a deployment to westus should have been denied by policy" "$code" "$out" RequestDisallowedByPolicy
+          # Also require the name of our 4E assignment (allowed-locations): proves the LOCATION rule refused it.
+          REQUIRE_ALSO=allowed-locations verdict "a deployment to westus should have been denied by the location policy" "$code" "$out" RequestDisallowedByPolicy
 
       - name: "(b) The identity must not be able to give out roles (role assignment denied)"
         env:
           RG: ${{ inputs.resource_group }}
         run: |
-          verdict() {
-            what="$1"; code="$2"; out="$3"; shift 3
-            if [ "$code" -eq 0 ]; then echo "FAIL: $what"; exit 1; fi
-            for want in "$@"; do
-              if printf '%s' "$out" | grep -q "$want"; then echo "PASS: $what (refused with $want)"; return 0; fi
-            done
-            echo "FAIL: failed for another reason: $(printf '%s' "$out" | grep -o '([A-Za-z]*)' | sort -u | tr '\n' ' ')"
-            exit 1
-          }
+          . "$GITHUB_WORKSPACE/4h-secretless-deploy/verdict.sh"  # defines verdict(); see that file
           # The identity's own object ID is the "oid" claim inside its access token (a token is three
           # dot-separated parts; the middle part is base64-encoded JSON). Reading it here avoids a
           # Microsoft Graph lookup, which this identity is not allowed to make.
           OID=$(az account get-access-token --query accessToken -o tsv 2>/dev/null | python3 -c '
           import sys, json, base64
           part = sys.stdin.read().strip().split(".")[1]
+          # Tokens drop the "=" padding that base64 needs (length must be a multiple of 4); put it back.
           part += "=" * (-len(part) % 4)
           print(json.loads(base64.urlsafe_b64decode(part))["oid"])
           ' 2>/dev/null) || OID=""
@@ -94,17 +78,16 @@ jobs:
         env:
           PRIVATE_RG: ${{ inputs.private_resource_group }}
         run: |
-          verdict() {
-            what="$1"; code="$2"; out="$3"; shift 3
-            if [ "$code" -eq 0 ]; then echo "FAIL: $what"; exit 1; fi
-            for want in "$@"; do
-              if printf '%s' "$out" | grep -q "$want"; then echo "PASS: $what (refused with $want)"; return 0; fi
-            done
-            echo "FAIL: failed for another reason: $(printf '%s' "$out" | grep -o '([A-Za-z]*)' | sort -u | tr '\n' ' ')"
-            exit 1
-          }
+          . "$GITHUB_WORKSPACE/4h-secretless-deploy/verdict.sh"  # defines verdict(); see that file
           set +e
           out=$(az group show --name "$PRIVATE_RG" --output none 2>&1)
           code=$?
           set -e
-          verdict "reading the private resource group should have been refused" "$code" "$out" AuthorizationFailed ResourceGroupNotFound
+          # Azure checks permission before existence, so an identity with no access gets AuthorizationFailed
+          # even for a group that exists. "Not found" therefore means the group is missing, or the identity
+          # can read the whole subscription: either way this check proves nothing, so it fails.
+          if [ "$code" -ne 0 ] && ! grep -q AuthorizationFailed <<<"$out" && grep -q ResourceGroupNotFound <<<"$out"; then
+            echo "FAIL: group missing or identity can read the subscription"
+            exit 1
+          fi
+          verdict "reading the private resource group should have been refused" "$code" "$out" AuthorizationFailed

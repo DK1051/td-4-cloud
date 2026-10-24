@@ -15,10 +15,12 @@ Eojin
 ## 4H Secretless Deploy
 
 Claude (models used)
-- (to be filled at wrap)
+- T4-S02 director (Opus 5.5): planned, closed the Bicep-pinning gap with the builder, checked the guide's URLs, asked Eojin the design choices, logged caveats, opened the PR.
+- T4-S02 `builder` (Sonnet 5.5): `main.bicep`, the `deploy.yml` and `cannot-do.yml` workflows with `verdict.sh`, the Bicep pin in CI and `setup.sh`, `OIDC-SETUP.md`, the 4H README, and 36 tests.
+- T4-S02 `redteam` (Fable 5.1): mid-review (8 items + 2 design choices), all handled. `verifier` (Opus 5.5): final check, `docs/verify/T4-S02.md`.
 
 Eojin
-- (to be filled at wrap)
+- Decided: cannot-do (c) accepts only AuthorizationFailed; the storage account has no usable keys (sign-in only). Still to do: follow `OIDC-SETUP.md` (check the subject format on GitHub's page first), set the three secrets, run "4H deploy" then "4H cannot-do", paste the run links into the Results table, record the credit balance.
 
 ## 4A Containment Runbook Copilot
 

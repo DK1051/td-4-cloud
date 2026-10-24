@@ -61,8 +61,8 @@ Do the first part once, as yourself, in Azure Cloud Shell (portal, the Cloud She
 4. Do not assign anything on `rg-td4-private`. The cannot-do test relies on the identity having no access there.
 
 ## 8. Step F: run the workflows
-1. GitHub, then the **Actions** tab, then **4H deploy**, then **Run workflow** on the `main` branch. Expect the log to end with `Succeeded`.
-2. Then **4H cannot-do**, **Run workflow** on `main`. Expect three `PASS` lines (one for each of the three checks).
+1. GitHub, then the **Actions** tab, then **4H deploy**, then **Run workflow** on the `main` branch. Expect the log to end with `Succeeded`. Always run this one first: it proves the template passes every policy, so the cannot-do refusal below comes from the westus location and nothing else.
+2. Then **4H cannot-do**, **Run workflow** on `main`. Expect three `PASS` lines (one for each of the three checks). Check (c) passes on `AuthorizationFailed` only; `ResourceGroupNotFound` makes it fail (Azure checks permission before existence, so "not found" means the group is missing or the identity can see too much).
 3. Paste the run links and outcomes into the Results table in `4h-secretless-deploy/README.md`. Links are public and safe; raw output is not.
 
 The workflows must run from `main`: the federated credential pins that branch, so a run from any other branch fails to log in by design.
@@ -73,6 +73,8 @@ The workflows must run from `main`: the federated credential pins that branch, s
 | `AADSTS70021` | No federated credential matches the token's subject. | Re-check the owner ID, the repository ID, the branch and the exact spelling in Step C; the workflow must run from `main`. |
 | `AADSTS700016` | Wrong client ID or tenant ID. | Re-copy the two values from the app's overview page into the secrets. |
 | `AuthorizationFailed` on the deploy | The Contributor assignment is missing, or not yet active. | Check Step E part 3, wait a few minutes, run again. |
+| `StorageAccountAlreadyTaken` in cannot-do check (a) | The 4E "Allowed locations" policy is not in force yet, so the westus deployment reached the name check instead of being refused. | Apply the 4E policies (or wait for them to start enforcing), then run again. |
+| `NoRegisteredProviderFound`, or "API version not supported" | The template's storage API version is not available in the region yet. | In `4h-secretless-deploy/main.bicep` edit the one `Microsoft.Storage/storageAccounts@2026-06-01` line to `2025-06-01`. |
 | `MissingSubscriptionRegistration` | The Microsoft.Storage registration (Step E part 1) is not done. | Finish it and wait for `Registered`. |
 
 Optional debugging, to see exactly what subject GitHub sends: temporarily add this step to a workflow that has `permissions: id-token: write`, run it once, read the printed `sub`, then remove the step and delete that run from the Actions tab (the line contains your two numbers, and public logs are public).
