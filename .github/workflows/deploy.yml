@@ -32,6 +32,12 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Pin Bicep to 0.48.1 (az would otherwise use any Bicep found on the runner's PATH)
+        run: |
+          az config set bicep.use_binary_from_path=false --output none
+          az bicep install --version v0.48.1
+          az bicep version | grep -qE 'Bicep CLI version 0\.48\.1( |$)' || { echo "FAIL: wrong Bicep version"; exit 1; }
+
       - name: Deploy the storage account (prints only the final state)
         env:
           # Inputs go through environment variables so they are never pasted into the shell script text.

@@ -77,11 +77,6 @@ def test_ci_and_setup_script_pin_bicep_0_48_1():
     ci = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
     assert "az bicep install --version v0.48.1" in ci
     assert ci.index("az bicep install") < ci.index("az bicep build")
-    # az would otherwise use any Bicep found on the runner's PATH, which makes the pin ineffective.
-    assert "az config set bicep.use_binary_from_path=false" in ci
-    assert ci.index("use_binary_from_path=false") < ci.index("az bicep install")
-    assert "az bicep version | grep -q '0\\.48\\.1' || { echo \"FAIL: wrong Bicep version\"; exit 1; }" in ci
-    assert ci.index("grep -q '0\\.48\\.1'") < ci.index("az bicep build")
     setup = (REPO / "environment" / "setup.sh").read_text(encoding="utf-8")
     assert "BICEP=0.48.1" in setup
     assert setup.rstrip().endswith("exit 0")
@@ -124,7 +119,8 @@ SOURCE_LINE = '. "$GITHUB_WORKSPACE/4h-secretless-deploy/verdict.sh"'
 
 
 def cannot_do_scripts():
-    return [s["run"] for s in all_steps(load_workflow("cannot-do.yml")) if "run" in s]
+    # the Bicep pin step has no verdict; the three checks are the steps that source verdict.sh
+    return [s["run"] for s in all_steps(load_workflow("cannot-do.yml")) if "verdict.sh" in s.get("run", "")]
 
 
 def test_cannot_do_has_three_steps_that_pass_only_on_the_specific_codes():
@@ -166,7 +162,7 @@ def test_workflows_never_print_the_captured_error_text_or_trace_commands():
 
 
 def test_deploy_workflow_succeeds_only_on_the_word_succeeded():
-    run = next(s["run"] for s in all_steps(load_workflow("deploy.yml")) if "run" in s)
+    run = next(s["run"] for s in all_steps(load_workflow("deploy.yml")) if "az deployment group create" in s.get("run", ""))
     assert "grep -qx Succeeded" in run
     assert "Code: *[A-Za-z]+" in run  # failures print codes only
 
@@ -247,6 +243,37 @@ def test_oidc_setup_guide_has_the_critical_details():
         "AADSTS700016",
         "AuthorizationFailed",
         "MissingSubscriptionRegistration",
-        "Check this format on the GitHub docs page above",
+        "Check this format on the GitHub docs page linked above",
     ]:
         assert needle in text, needle
+
+
+BICEP_VERSION_ASSERT = "az bicep version | grep -qE 'Bicep CLI version 0\\.48\\.1( |$)' || { echo \"FAIL: wrong Bicep version\"; exit 1; }"
+
+
+def bicep_pin_run_blocks():
+    """The shell text of every step that installs/uses the pinned Bicep, per workflow file."""
+    result = {}
+    for name in ["ci.yml", "deploy.yml", "cannot-do.yml"]:
+        blocks = [s["run"] for s in all_steps(load_workflow(name)) if "run" in s and "az bicep install" in s["run"]]
+        assert len(blocks) == 1, name
+        result[name] = blocks[0]
+    return result
+
+
+def test_all_three_workflows_pin_and_check_the_bicep_version():
+    for name, run in bicep_pin_run_blocks().items():
+        assert "az config set bicep.use_binary_from_path=false" in run, name
+        assert "az bicep install --version v0.48.1" in run, name
+        assert BICEP_VERSION_ASSERT in run, name
+        # order: stop using PATH bicep, install the pin, then check it
+        assert run.index("use_binary_from_path") < run.index("az bicep install") < run.index("grep -qE"), name
+
+
+def test_pin_comes_before_the_step_that_compiles_the_template():
+    for name in ["ci.yml", "deploy.yml", "cannot-do.yml"]:
+        steps = all_steps(load_workflow(name))
+        runs = [s.get("run", "") for s in steps]
+        pin = next(i for i, r in enumerate(runs) if "az bicep install" in r)
+        compile_at = next(i for i, r in enumerate(runs) if ("az deployment group create" in r or "az bicep build" in r))
+        assert pin <= compile_at, name

@@ -32,7 +32,9 @@ An *app registration* is the identity the workflow will log in as.
    - **Audience:** `api://AzureADTokenExchange`
    - **Name:** `github-main`
 
-**Check this format on the GitHub docs page above before you create the credential — this guide's author could not open that page from the cloud session. If the page shows a different format, the page wins.** The page is https://docs.github.com/en/actions/reference/security/oidc. The subject above is GitHub's immutable format (it contains the numeric owner and repository IDs), used by repositories created after July 15, 2026. If the page describes it differently, use the page's format and tell Claude at the next session so this guide is corrected.
+The subject above is GitHub's immutable format (it contains the numeric owner and repository IDs), used by repositories created after July 15, 2026. Source: https://docs.github.com/en/actions/reference/security/oidc
+
+**Check this format on the GitHub docs page linked above before you create the credential — this guide's author could not open that page from the cloud session. If the page shows a different format, the page wins.** In that case use the page's format and tell Claude at the next session so this guide is corrected.
 
 ## 5. Never rename the repository
 **Never rename the repository after this.** The subject contains the repository name, so a rename breaks the match and every login fails. Do not rename the owner account either. If this ever happens, fix the subject in the federated credential; do not recreate the repository.

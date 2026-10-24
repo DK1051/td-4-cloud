@@ -58,7 +58,7 @@ jobs:
             az config set bicep.use_binary_from_path=false
             az bicep install --version v0.48.1
             az bicep version
-            az bicep version | grep -q '0\.48\.1' || { echo "FAIL: wrong Bicep version"; exit 1; }
+            az bicep version | grep -qE 'Bicep CLI version 0\.48\.1( |$)' || { echo "FAIL: wrong Bicep version"; exit 1; }
             az bicep build --file 4h-secretless-deploy/main.bicep
           else
             echo "4h-secretless-deploy/main.bicep not present yet - skipping"
