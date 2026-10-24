@@ -1,0 +1,61 @@
+name: 4H deploy
+
+# Started by hand from the Actions tab, on main only (the Azure federated credential pins the main branch).
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: Resource group to deploy into (must already exist)
+        required: true
+        default: rg-td4-canada
+      owner_tag:
+        description: Value of the required owner tag
+        required: true
+        default: eojin
+
+# id-token: write lets this job ask GitHub for the short-lived OIDC token. Nothing else is allowed.
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v6
+
+      - name: Log in to Azure (OIDC, no stored password)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Pin Bicep to 0.48.1 (az would otherwise use any Bicep found on the runner's PATH)
+        run: |
+          az config set bicep.use_binary_from_path=false --output none
+          az bicep install --version v0.48.1
+          az bicep version | grep -qE 'Bicep CLI version 0\.48\.1( |$)' || { echo "FAIL: wrong Bicep version"; exit 1; }
+
+      - name: Deploy the storage account (prints only the final state)
+        env:
+          # Inputs go through environment variables so they are never pasted into the shell script text.
+          RG: ${{ inputs.resource_group }}
+          OWNER_TAG: ${{ inputs.owner_tag }}
+        run: |
+          set +e
+          out=$(az deployment group create \
+            --resource-group "$RG" \
+            --template-file 4h-secretless-deploy/main.bicep \
+            --parameters owner="$OWNER_TAG" \
+            --query properties.provisioningState -o tsv 2>&1)
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ] || ! grep -qx Succeeded <<<"$out"; then
+            # Public logs: print error codes only, never the full error text (it can hold object IDs).
+            codes=$(grep -oE '\([A-Za-z]+\)|(Error )?Code: *[A-Za-z]+|"code": *"[A-Za-z]+"' <<<"$out" | sort -u | tr '\n' ' ') || true
+            echo "FAIL: deployment did not succeed. Error codes: $codes"
+            exit 1
+          fi
+          echo Succeeded

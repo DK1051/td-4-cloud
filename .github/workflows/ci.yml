@@ -49,11 +49,16 @@ jobs:
         run: pytest -q || [ $? -eq 5 ]
 
       # Track 4 extra: validate the 4H Bicep template with the Azure CLI that is
-      # preinstalled on GitHub runners (az installs the Bicep CLI on first use).
+      # preinstalled on GitHub runners. By default az would use a Bicep found on the runner's PATH,
+      # so we tell it not to, install the pinned version itself and check which one it will use.
       # Skipped cleanly until T4-S02 creates the file.
       - name: Bicep build (4H template; skipped until it exists)
         run: |
           if [ -f 4h-secretless-deploy/main.bicep ]; then
+            az config set bicep.use_binary_from_path=false
+            az bicep install --version v0.48.1
+            az bicep version
+            az bicep version | grep -qE 'Bicep CLI version 0\.48\.1( |$)' || { echo "FAIL: wrong Bicep version"; exit 1; }
             az bicep build --file 4h-secretless-deploy/main.bicep
           else
             echo "4h-secretless-deploy/main.bicep not present yet - skipping"
