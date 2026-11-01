@@ -4,6 +4,8 @@ Usage: python 4a-containment-copilot/scripts/split_run.py <model> [--base DIR]
 
 It stops with an error if a block has no "=== END ===", if the same incident
 appears twice, or if a new "=== INC-nn ===" starts before the last one ended.
+If incidents/INC-*.md exist, it also stops when an incident has no block or a
+block has no incident file.
 It also replaces GUID-shaped strings (8-4-4-4-12 hex digits) with
 <guid-redacted> in raw.md and in every output file.
 """
@@ -63,14 +65,31 @@ def split_blocks(text):
     return blocks
 
 
+def check_against_incidents(blocks, base):
+    """If incidents/INC-*.md exist, the blocks must match them exactly."""
+    expected = {p.stem for p in (Path(base) / "incidents").glob("INC-*.md")}
+    if not expected:
+        return  # no incident files to compare with
+    missing = sorted(expected - set(blocks))
+    extra = sorted(set(blocks) - expected)
+    if missing:
+        raise SplitError("no block for " + ", ".join(missing))
+    if extra:
+        raise SplitError("block for an incident with no file: " + ", ".join(extra))
+
+
 def split_run(model, base=DEFAULT_BASE):
     """Split runs/<model>/raw.md. Returns (list of files written, redaction count)."""
     run_dir = Path(base) / "runs" / model
     raw_path = run_dir / "raw.md"
     if not raw_path.is_file():
         raise SplitError(f"{raw_path} not found")
-    raw_text, count = redact_guids(raw_path.read_text(encoding="utf-8"))
+    try:
+        raw_text, count = redact_guids(raw_path.read_text(encoding="utf-8"))
+    except UnicodeDecodeError as err:
+        raise SplitError(f"{raw_path} is not valid UTF-8 text") from err
     blocks = split_blocks(raw_text)  # raises before anything is written
+    check_against_incidents(blocks, base)
     raw_path.write_text(raw_text, encoding="utf-8")
     written = []
     for incident_id, block in blocks.items():

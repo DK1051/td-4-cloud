@@ -23,7 +23,7 @@ A scorer then compares each plan with my answer key and counts correct, missing 
 | `DESIGN-REVIEW.md` | The `redteam` review of the design before any code, and each change made because of it. |
 | `../.claude/agents/containment-bot.md` | The copilot itself: a Claude Code sub-agent that can only `Read` and `Glob` (list) files. It has no tool that can run a command, write a file or reach the network. |
 | `scripts/make_batch.py` | Writes `runs/batch-prompt.md`: the instruction plus the list of incident files. |
-| `scripts/split_run.py <model>` | Splits one model's answer (`runs/<model>/raw.md`) into one file per incident, fails loudly if a block is missing or broken, and replaces anything shaped like an Azure ID with `<guid-redacted>`. |
+| `scripts/split_run.py <model>` | Splits one model's answer (`runs/<model>/raw.md`) into one file per incident, fails loudly if a block is broken or if an incident in `incidents/` has no block, and replaces anything shaped like an Azure ID with `<guid-redacted>`. |
 | `scripts/score.py` | Scores every plan against its answer key and writes `RESULTS.md`. |
 | `../tests/test_4a_score.py` | Tests for the scorer and splitter, with fixture plans in `../tests/fixtures/4a/` (written by Claude as test data; they are not my answer keys). |
 
