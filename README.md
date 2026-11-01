@@ -10,7 +10,7 @@ This is Track 4 of the [Takeover Defense](https://github.com/DK1051/takeover-def
 |---|---|---|
 | 4E Canada-Only Landing Zone | Easy | Built (Claude's work verified) |
 | 4H Secretless Deploy | Hard | Built (Claude's work verified; Azure runs pending) |
-| 4A Containment Runbook Copilot | Hard + AI | Planned |
+| 4A Containment Runbook Copilot | Hard + AI | In progress (framework + scorer built; evaluation pending) |
 
 Status values: Planned → In progress → Built (Claude's work verified) → Applied (I ran it against my own Azure account) → Reviewed (class session done).
 
@@ -23,7 +23,7 @@ A "landing zone" is the set of guard-rails you put on a cloud account before you
 A GitHub Actions workflow that deploys a locked-down Azure storage account from a Bicep template (Bicep is Azure's language for describing resources as code) using OpenID Connect (OIDC). OIDC lets GitHub prove to Azure "this is workflow X in repository Y" with a short-lived signed token, so no password or key is ever stored. A second workflow tries three things the deployment identity must NOT be able to do, and passes only if Azure refuses each one.
 
 ### 4A Containment Runbook Copilot — `4a-containment-copilot/`
-An AI assistant that reads an incident summary (from my own Track 2 investigations) and drafts a containment checklist: revoke sessions, remove the newly added sign-in method, remove new permissions, block sign-in, preserve evidence — and never touch the emergency "break-glass" accounts. Every command is written as a commented-out dry run; the assistant has no ability to execute anything. I grade its plans against answer keys I wrote from Microsoft Learn, and compare three models.
+An AI assistant that reads an incident summary (from my own Track 2 investigations) and drafts a containment checklist: revoke sessions, remove the newly added sign-in method, remove new permissions, block sign-in, preserve evidence — and never touch the emergency "break-glass" accounts. Every command is written as a commented-out dry run; the assistant has no ability to execute anything. Its plans will be scored against answer keys I write from Microsoft Learn, for three models; the framework and scorer are built, and the evaluation runs after my CompTIA A+ exam.
 
 ## How this repo is built
 

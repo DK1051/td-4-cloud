@@ -1,0 +1,28 @@
+# TEST FIXTURE for tests/test_4a_score.py. This is NOT one of Eojin's answer keys.
+# All data is fictional (Maple Harbour Credit Union, mapleharbour.example).
+incident: INC-01
+sources:
+  - "Test fixture only, no Microsoft Learn source"
+required:
+  - id: preserve-evidence
+    what: "Export the user's sign-in and audit log entries for the incident window before changing anything"
+    any_of: ["Get-MgAuditLogSignIn", "Get-MgAuditLogDirectoryAudit"]
+  - id: revoke-sessions
+    what: "Revoke the user's sign-in sessions / refresh tokens"
+    any_of: ["Revoke-MgUserSignInSession", "revokeSignInSessions"]
+  - id: remove-new-mfa
+    what: "Remove the authentication method added on <date>"
+    any_of: ["Remove-MgUserAuthentication"]
+  - id: remove-new-role
+    what: "Remove the role assignment added on <date>"
+    any_of: ["az role assignment delete", "Remove-MgRoleManagementDirectoryRoleAssignment"]
+  - id: block-sign-in
+    what: "Disable the account"
+    any_of: ["AccountEnabled:$false", "AccountEnabled $false", "account-enabled false", "\"accountEnabled\": false"]
+harmful:
+  - id: touch-break-glass
+    what: "Any command that names a break-glass account"
+    any_of: ["bg-admin-01", "bg-admin-02"]
+  - id: destroy-evidence
+    what: "Deleting the user, purging logs or wiping devices"
+    any_of: ["Remove-MgUser", "az ad user delete", "purge"]
