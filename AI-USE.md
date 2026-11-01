@@ -25,7 +25,11 @@ Eojin
 ## 4A Containment Runbook Copilot
 
 Claude (models used)
-- (to be filled at wrap)
+- T4-S03 (scoped, framework only) director (Opus 5.5): wrote `DESIGN.md`, `DESIGN-REVIEW.md` and the 4A README; applied the redteam fixes to the design before any code.
+- T4-S03 `redteam` (Fable 5.1): design review of `DESIGN.md` and the answer-key format only (no incident reports); verdict "go with fixes", 4 fix-first + 3 later items, all handled.
+- T4-S03 `builder` (Sonnet 5.5): `.claude/agents/containment-bot.md`, `scripts/make_batch.py`, `split_run.py`, `score.py`, `tests/test_4a_score.py` and the test-fixture key and plans.
+- T4-S03 `verifier` (Opus 5.5): final check of the built parts, `docs/verify/T4-S03.md`.
+- T4-S03 `chores` (Haiku 5.5): not used. The copilot runs under Haiku, Sonnet and Opus have NOT happened yet.
 
 Eojin
-- (to be filled at wrap)
+- Approved the framework-only scope. Still to do: incident reports and answer keys (from the 2E hunt and Microsoft Learn), the three model runs with credit readings (after the A+ exam, on plan usage), the manual grade in T4-C2.
