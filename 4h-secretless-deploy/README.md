@@ -29,7 +29,7 @@ Each check passes only when the output contains the specific code. If the comman
 | Who | What |
 |---|---|
 | Claude | Wrote `main.bicep`, both workflows, the tests and the guides, and checked that the Bicep compiles and the workflow shell logic behaves against a stand-in `az` command. Claude never connected to Azure and never saw an ID. |
-| Eojin | Follows `OIDC-SETUP.md`, sets the three GitHub secrets, runs both workflows, and fills in the Results table. Not done yet; this project stays "Built" until he has. |
+| Eojin | Decided that cannot-do check (c) accepts only AuthorizationFailed and that the storage account has no usable keys (sign-in only). Next: follow `OIDC-SETUP.md`, set the three GitHub secrets, run both workflows, and fill in the Results table; this project stays "Built" until he has. |
 
 ## Results
 Fill in after running. Links are public and safe to paste; raw output is not.
