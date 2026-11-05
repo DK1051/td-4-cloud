@@ -29,7 +29,7 @@ An AI assistant that reads an incident summary (from my own Track 2 investigatio
 
 - Work happens in short, planned sessions. Each session has a brief in `docs/briefs/` and a line in `docs/RUN-SHEET.md`.
 - Claude Code does the building: a director model plans, a builder writes code, a verifier checks the result against the brief and writes `docs/verify/<ID>.md`, and a separate reviewer model red-teams designs before anything AI-driven is built. `AI-USE.md` records what Claude did and what I did, per project. `COSTS.md` records what each session cost.
-- Class sessions (`docs/learning/`) are where I explain the code back and answer "why" questions without hints. If I cannot explain a file in this repo, it does not stay.
+- In class sessions (`docs/learning/`; none held yet) I will explain the code back and answer "why" questions without hints. If I cannot explain a file, it does not stay.
 - Surprises and plan changes are logged in `docs/CAVEATS.md` rather than hidden.
 
 ## How to verify my work
