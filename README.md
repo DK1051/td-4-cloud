@@ -8,8 +8,8 @@ This is Track 4 of the [Takeover Defense](https://github.com/DK1051/takeover-def
 
 | Project | Level | Status |
 |---|---|---|
-| 4E Canada-Only Landing Zone | Easy | Built (Claude's work verified) |
-| 4H Secretless Deploy | Hard | Built (Claude's work verified; Azure runs pending) |
+| 4E Canada-Only Landing Zone | Easy | Built (T4-S01; not yet applied to Azure) |
+| 4H Secretless Deploy | Hard | Built (T4-S02; Azure runs pending) |
 | 4A Containment Runbook Copilot | Hard + AI | Cut (framework + scorer built; evaluation moved past Nov 5) |
 
 Status values (the same words as the hub): Planned → In progress → Built → Verified → Cut (moved to after Nov 5). "Built" means Claude's part is done and checked by the verifier; I have not yet run anything against Azure.
@@ -17,7 +17,7 @@ Status values (the same words as the hub): Planned → In progress → Built →
 ## Projects
 
 ### 4E Canada-Only Landing Zone — `4e-canada-landing-zone/`
-A "landing zone" is the set of guard-rails you put on a cloud account before you build anything in it. This one keeps every resource inside Canada (Azure regions `canadacentral` and `canadaeast`), requires an `owner` tag on everything, defines a limited "operator" role that can read everything but only start and stop virtual machines, and gives the portal steps for a spending budget plus an alert that fires whenever someone is given new permissions (neither is set up yet). It mirrors the intent of the Government of Canada's data-residency direction for sensitive data; it does not claim compliance with anything.
+A "landing zone" is the set of guard-rails you put on a cloud account before you build anything in it. Once applied, this one is meant to keep resources inside Canada (Azure regions `canadacentral` and `canadaeast`; resources whose location is `global` are skipped) and to require an `owner` tag on resources (not on resource groups); it defines a limited "operator" role that can read everything but only start and stop virtual machines, and gives the portal steps for a spending budget plus an alert that fires whenever someone is given new permissions (neither is set up yet). It mirrors the intent of the Government of Canada's data-residency direction for sensitive data; it does not claim compliance with anything.
 
 ### 4H Secretless Deploy — `4h-secretless-deploy/`
 A GitHub Actions workflow, written but not yet run, that is meant to deploy an Azure storage account with four settings locked (HTTPS only, TLS 1.2+, no public blobs, no account keys; network access is not restricted) from a Bicep template (Bicep is Azure's language for describing resources as code) using OpenID Connect (OIDC). OIDC lets GitHub prove to Azure "this is workflow X in repository Y" with a short-lived signed token, so no password, key or certificate is stored (three identifiers are kept as GitHub secrets). A second workflow, not yet run against Azure, is written to try three things the deployment identity must NOT be able to do, and to pass only if Azure refuses each one.
