@@ -23,7 +23,7 @@ Nothing in this folder was run against Azure by Claude. Every file is to be appl
 | `../tests/test_4e_files.py` | Automatic checks of the files above (run in CI on every pull request). |
 
 ## Policy names confirmed from Microsoft's public repository
-I read these three files from the `Azure/azure-policy` repository on GitHub (branch `master`, accessed 2026-10-22) and used only the `displayName` and `parameters` fields. I did not copy the policy definition IDs anywhere; the commands below look the definitions up by display name.
+Claude (the builder model) read these three files from the `Azure/azure-policy` repository on GitHub (branch `master`, accessed 2026-10-22) and used only the `displayName` and `parameters` fields. It did not copy the policy definition IDs anywhere; the commands below look the definitions up by display name.
 
 | Display name | Parameter used | Other parameter | Source file |
 |---|---|---|---|
