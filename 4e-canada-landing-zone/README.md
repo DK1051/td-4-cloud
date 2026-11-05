@@ -8,7 +8,7 @@ A *landing zone* is the set of rules you put on a cloud account on day one, befo
 3. **A limited role.** A *role* is a named bundle of permissions. "Portfolio Operator (td-4)" can read everything and start, stop and deallocate virtual machines, and nothing else. A *scope* is where a role or policy applies; this role is limited to one subscription. Creating the role does not give it to anyone; assigning it to an operator account (as the diagram shows) happens later, outside 4E.
 4. **A budget and an alert.** A monthly spending budget with e-mail alerts, and an alert that fires when anyone is given new permissions, because that is the first thing an attacker with a stolen account does.
 
-Nothing in this folder was run against Azure by Claude. Every file is applied by Eojin himself in Azure Cloud Shell after the pull request is merged.
+Nothing in this folder was run against Azure by Claude. Every file is to be applied by Eojin himself in Azure Cloud Shell after the pull request is merged; none has been applied yet.
 
 ## Files
 
@@ -101,7 +101,7 @@ Fill in after applying. Crop every ID out of screenshots; no raw portal exports.
 | Role-assignment alert | | |
 
 ## Limits
-- Not tested against Azure. The automatic tests only check the JSON files; Eojin's manual run is the real test.
+- Not tested against Azure. The automatic tests read only files in this repository (JSON and Markdown), not Azure; Eojin's manual run is the real test.
 - The location policy skips resources whose location is `global`, and the tag policy does not apply to resource groups (both stated in Microsoft's own descriptions in the source files above). So a tag on resource groups is not enforced by this project.
 - Mounting a Cloud Shell storage account later will be denied unless the account is in Canada and has an `owner` tag.
 - A policy only stops new actions; it does not delete anything that already exists.

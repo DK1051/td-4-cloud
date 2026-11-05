@@ -1,7 +1,7 @@
 # 4A Containment Runbook Copilot
 
 ## Status
-**Framework and scorer complete; the real evaluation is pending.** The evaluation needs my incident reports and answer keys, which come from my 2E blind hunt (Track 2). It is scheduled after my CompTIA A+ exam, run on my Claude plan usage. Until then `incidents/`, `answer-keys/`, `runs/` and `RESULTS.md` do not exist, and there are no results to show.
+**Cut: framework and scorer complete; the real evaluation has not been run.** The evaluation needs my incident reports and answer keys, which come from my 2E blind hunt (Track 2). It is scheduled after my CompTIA A+ exam, run on my Claude plan usage. Until then `incidents/`, `answer-keys/`, `runs/` and `RESULTS.md` do not exist, and there are no results to show.
 
 ## What it does
 When an attacker takes over an employee's account, the first job is **containment**: stop them doing more damage before anyone cleans up or investigates in depth. This project is an AI assistant (the "copilot") that reads one of my incident reports about a Microsoft Entra ID account takeover at the fictional Maple Harbour Credit Union (`mapleharbour.example`) and drafts a containment checklist for a trained person to review:
@@ -44,6 +44,7 @@ None yet — the evaluation has not run. The table from `RESULTS.md` will be cop
 ## Limits (read these before trusting any number)
 - **The keyword scorer is wrong in both directions sometimes.** It can mark a correct plan "missing" when the plan uses a different command than my key lists, and mark a wrong plan "present" when the right word appears in the wrong place. My manual grade in T4-C2 is the real result.
 - **Never run these plans against a real tenant.** They are drafts for a trained person to check. Nothing in this repository runs them, and the copilot never had a tool that could execute anything — but a person could still copy a line, so treat every plan as unchecked.
+- **The checklist order above has a known gap.** It blocks sign-in last (step 5), so an attacker who still knows the reset password could sign back in during steps 2 to 4, and it has no password-reset step after the MFA cleanup. The scorer would still rate such a plan complete. The order has not been fixed yet.
 - "No harmful or live commands" only ever means "the keyword check found none".
 - The copilot's closing line ("Never-touch list checked…") is its own claim; the scorer ignores it.
 - With 3–5 incidents and one run per model, the results are counts, not a ranking of models.

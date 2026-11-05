@@ -5,7 +5,7 @@ This project deploys an Azure storage account (with the protections listed under
 
 Plain-English glossary:
 - **Bicep** is Azure's language for describing resources as code. `main.bicep` describes one storage account: Canada by default, HTTPS only, TLS 1.2 or newer, no public access to blobs (files in storage), no use of account keys (`allowSharedKeyAccess: false`, so only Microsoft Entra ID sign-in works), sign-in as the default in tools (`defaultToOAuthAuthentication: true`), an `owner` tag, and an output of the account name only. What is NOT locked: the network is open (see Limits).
-- **OIDC (OpenID Connect)** lets GitHub give Azure a short-lived signed token that says "this is workflow X in repository Y on branch main". Nothing secret is stored in GitHub or in this repository.
+- **OIDC (OpenID Connect)** lets GitHub give Azure a short-lived signed token that says "this is workflow X in repository Y on branch main". No password, key or certificate is stored in GitHub or in this repository; three identifiers (client ID, tenant ID, subscription ID) are kept as GitHub secrets.
 - A **federated credential** is the rule you register in Azure that says which exact repository and branch may use that token to log in. `OIDC-SETUP.md` explains how to create it, including the one subject-string detail that breaks everything if it is wrong.
 - A **workflow** is a GitHub Actions script. `workflow_dispatch` means it starts only when I press **Run workflow** by hand; there is no automatic trigger.
 

@@ -6,7 +6,7 @@ Do this after the policies are applied (see `README.md`) and after you have sign
 
 ## Part A. A monthly budget with three alerts
 
-A *budget* in Azure does not stop spending. It only e-mails you when your spending crosses a line you chose, so a mistake costs you cents instead of dollars.
+A *budget* in Azure does not stop spending. It only e-mails you when your spending crosses a line you chose, and Microsoft says cost data typically arrives within 8-24 hours and budgets are checked against it every 24 hours ([source](https://learn.microsoft.com/en-us/azure/cost-management-billing/costs/tutorial-acm-create-budgets)), so an alert can come a day or more after the spending. A budget alone will not catch a mistake quickly. Whether the free plan's spending limit stops charges before the budget alert fires is `TODO(verify)`; until that is checked, treat the budget as a warning only.
 
 Is a budget available on a free-trial subscription? `TODO(verify)`: check on sign-up day. If the portal does not offer it, skip Part A, do Part B, and add a line to `docs/CAVEATS.md`.
 
