@@ -16,6 +16,10 @@ FOUR_H = REPO / "4h-secretless-deploy"
 
 DEPLOY_WORKFLOWS = ["deploy.yml", "cannot-do.yml"]
 ALLOWED_SECRETS = {"AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID", "GITHUB_TOKEN"}
+# The commit that the azure/login v3 tag pointed to when the workflows were SHA-pinned
+# (from `git ls-remote --tags https://github.com/azure/login refs/tags/v3^{}`).
+AZURE_LOGIN_V3_SHA = "a641126d1b8aa4d1fa005f4f92df94a3a4c4c906"
+ALLOWED_AZURE_LOGIN = {"azure/login@v3", f"azure/login@{AZURE_LOGIN_V3_SHA}"}
 
 
 def load_workflow(name):
@@ -47,8 +51,14 @@ def test_permissions_are_exactly_id_token_and_contents_read(name):
 
 @pytest.mark.parametrize("name", DEPLOY_WORKFLOWS)
 def test_exactly_one_azure_login_with_the_three_secrets(name):
-    logins = [s for s in all_steps(load_workflow(name)) if s.get("uses") == "azure/login@v3"]
+    logins = [s for s in all_steps(load_workflow(name)) if s.get("uses", "").startswith("azure/login@")]
     assert len(logins) == 1
+    # Major version 3, either by tag or by the pinned v3 commit SHA.
+    assert logins[0]["uses"] in ALLOWED_AZURE_LOGIN
+    if logins[0]["uses"] != "azure/login@v3":
+        # A SHA pin must keep the major tag in a trailing comment so a reader can see it is v3.
+        text = (WORKFLOWS / name).read_text(encoding="utf-8")
+        assert f"uses: azure/login@{AZURE_LOGIN_V3_SHA} # v3" in text
     assert logins[0]["with"] == {
         "client-id": "${{ secrets.AZURE_CLIENT_ID }}",
         "tenant-id": "${{ secrets.AZURE_TENANT_ID }}",
