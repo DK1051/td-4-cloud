@@ -101,7 +101,7 @@ Fill in after applying. Crop every ID out of screenshots; no raw portal exports.
 | Role-assignment alert | | |
 
 ## Limits
-- Not tested against Azure. The automatic tests read only files in this repository (JSON and Markdown), not Azure; Eojin's manual run is the real test.
+- Not tested against Azure. The automatic tests read only files in this repository, not Azure; Eojin's manual run is the real test.
 - The location policy skips resources whose location is `global`, and the tag policy does not apply to resource groups (both stated in Microsoft's own descriptions in the source files above). So a tag on resource groups is not enforced by this project.
 - Mounting a Cloud Shell storage account later will be denied unless the account is in Canada and has an `owner` tag.
 - A policy only stops new actions; it does not delete anything that already exists.
